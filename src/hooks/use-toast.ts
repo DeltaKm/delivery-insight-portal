@@ -1,14 +1,9 @@
-import * as React from "react"
+import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 20
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = ToastProps & {
+type ToasterToast = Toast & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -34,11 +29,11 @@ type ActionType = typeof actionTypes
 type Action =
   | {
       type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
+      toast: Omit<ToasterToast, "id">
     }
   | {
       type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
+      toast: Partial<ToasterToast> & Pick<ToasterToast, "id">
     }
   | {
       type: ActionType["DISMISS_TOAST"]
@@ -76,14 +71,19 @@ export const reducer = (state: State, action: Action): State => {
     case "ADD_TOAST":
       return {
         ...state,
-        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        toasts: [
+          ...state.toasts,
+          { ...action.toast, id: genId() },
+        ],
       }
 
     case "UPDATE_TOAST":
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
+          t.id === action.toast.id
+            ? { ...t, ...action.toast }
+            : t
         ),
       }
 
@@ -162,7 +162,7 @@ function toast({ ...props }: Toast) {
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }

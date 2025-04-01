@@ -1,18 +1,20 @@
 
+"use client";
+
 import { useState } from "react";
 import { Delivery } from "@/types";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Search } from "lucide-react";
+import { it } from "date-fns/locale";
 
 interface DeliveryTableProps {
   deliveries: Delivery[];
@@ -20,86 +22,148 @@ interface DeliveryTableProps {
 }
 
 const DeliveryTable = ({ deliveries, isLoading }: DeliveryTableProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<keyof Delivery>("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const filteredDeliveries = deliveries.filter((delivery) => 
-    delivery.riderEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    delivery.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    delivery.deliveryAddress.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const toggleSort = (column: keyof Delivery) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortedDeliveries = [...deliveries].sort((a, b) => {
+    if (sortBy === "date") {
+      const dateA = new Date(a[sortBy]).getTime();
+      const dateB = new Date(b[sortBy]).getTime();
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+    }
+    
+    if (a[sortBy] < b[sortBy]) return sortOrder === "asc" ? -1 : 1;
+    if (a[sortBy] > b[sortBy]) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const getStatusColor = (status: Delivery["status"]) => {
+    switch (status) {
+      case "delivered":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getStatusText = (status: Delivery["status"]) => {
+    switch (status) {
+      case "delivered":
+        return "Consegnato";
+      case "pending":
+        return "In corso";
+      case "cancelled":
+        return "Annullato";
+      default:
+        return status;
+    }
+  };
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), "MMM d, yyyy h:mm a");
+      const date = new Date(dateString);
+      return format(date, "d MMMM yyyy, HH:mm", { locale: it });
     } catch (error) {
+      console.error("Invalid date format:", dateString);
       return dateString;
-    }
-  };
-  
-  const getStatusBadge = (status: Delivery['status']) => {
-    switch(status) {
-      case 'delivered':
-        return <Badge className="bg-green-500 hover:bg-green-600">Delivered</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pending</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-500 hover:bg-red-600">Cancelled</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
-        <Input
-          placeholder="Search by rider, recipient or address..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-      
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Rider Email</TableHead>
-              <TableHead>Recipient</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  Loading deliveries...
-                </TableCell>
+                <TableHead 
+                  onClick={() => toggleSort("recipientName")}
+                  className="cursor-pointer hover:bg-muted"
+                >
+                  Destinatario
+                  {sortBy === "recipientName" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </TableHead>
+                <TableHead 
+                  onClick={() => toggleSort("deliveryAddress")}
+                  className="cursor-pointer hover:bg-muted"
+                >
+                  Indirizzo
+                  {sortBy === "deliveryAddress" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </TableHead>
+                <TableHead 
+                  onClick={() => toggleSort("date")}
+                  className="cursor-pointer hover:bg-muted"
+                >
+                  Data
+                  {sortBy === "date" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </TableHead>
+                <TableHead 
+                  onClick={() => toggleSort("status")}
+                  className="cursor-pointer hover:bg-muted"
+                >
+                  Stato
+                  {sortBy === "status" && (
+                    <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </TableHead>
               </TableRow>
-            ) : filteredDeliveries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
-                  No deliveries found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredDeliveries.map((delivery) => (
-                <TableRow key={delivery.id}>
-                  <TableCell className="font-medium">{delivery.riderEmail}</TableCell>
-                  <TableCell>{delivery.recipientName}</TableCell>
-                  <TableCell>{delivery.deliveryAddress}</TableCell>
-                  <TableCell>{formatDate(delivery.date)}</TableCell>
-                  <TableCell>{getStatusBadge(delivery.status)}</TableCell>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4">
+                    Caricamento...
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+              ) : sortedDeliveries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4">
+                    Nessuna consegna trovata
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedDeliveries.map((delivery) => (
+                  <TableRow key={delivery.id}>
+                    <TableCell className="font-medium">
+                      {delivery.recipientName}
+                    </TableCell>
+                    <TableCell>{delivery.deliveryAddress}</TableCell>
+                    <TableCell>{formatDate(delivery.date)}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={getStatusColor(delivery.status)}
+                      >
+                        {getStatusText(delivery.status)}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
