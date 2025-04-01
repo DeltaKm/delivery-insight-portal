@@ -1,0 +1,10 @@
+
+// Questi sono i nuovi script da aggiungere al package.json
+// Dovrai aggiornare il package.json manualmente con:
+
+"scripts": {
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint"
+}
